@@ -7,8 +7,6 @@ import io.circe.generic.semiauto._
 
 case class DropboxApiArg(path: String, mode: String, autorename: Boolean = false, mute: Boolean = false, strict_conflict: Boolean = false)
 
-sealed trait DropboxLoadResponse
-
 case class DropboxSuccessLoadResponse(name: String,
                                path_lower: String,
                                path_display: String,
@@ -17,15 +15,15 @@ case class DropboxSuccessLoadResponse(name: String,
                                server_modified: String,
                                rev: String,
                                size: Double,
-                               content_hash: String) extends DropboxLoadResponse
+                               content_hash: String)
 
-case class DropboxFailLoadResponse(error_summary: String, error: Error) extends DropboxLoadResponse
+case class DropboxFailLoadResponse(error_summary: String, error: Error)
 
 case class Error(`.tag`: String, reason: Reason, upload_session_id: String)
 case class Reason(`.tag`: String, conflict: Conflict)
 case class Conflict(`.tag`: String)
 
-case class DropboxBadRequestLoadResponse(err: String) extends DropboxLoadResponse
+case class DropboxBadRequestLoadResponse(err: String)
 
 
 object implicits {
