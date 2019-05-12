@@ -2,19 +2,16 @@ package com.sigevsky.storage
 
 
 import cats.Monad
-import cats.effect.{ExitCode, IO, IOApp, Sync}
+import cats.effect.Sync
 import cats.implicits._
-import com.sigevsky.Main.ec
-import io.circe.syntax._
+import io.circe.syntax._, io.circe.generic.auto._
 import org.http4s.client._
 import org.http4s.headers.{Authorization, `Content-Type`}
 import org.http4s.{AuthScheme, Credentials, Header, Headers, MediaType, Method, ParseFailure, Request, Uri}
-import com.sigevsky.encodings._
-import com.sigevsky.data.implicits._
 import com.sigevsky.data._
+import com.sigevsky.encodings._
 import com.sigevsky.data.exceptions.exceptions.DropboxLoadException
 import org.http4s.Status.{ClientError, Successful}
-import org.http4s.client.blaze.BlazeClientBuilder
 
 
 class DropboxClient[F[_]](client: Client[F], token: String) {
@@ -37,18 +34,4 @@ class DropboxClient[F[_]](client: Client[F], token: String) {
           case ClientError(res) if 409 == res.status.code => res.as[DropboxFailLoadResponse].map(e => DropboxLoadException(e.error_summary).asLeft)
           case _ => M.pure(DropboxLoadException("Something went wrong while quering dropbox api").asLeft)
         }).map(_.flatten)
-}
-
-object test extends IOApp {
-
-  val dargs = DropboxApiArg("/sincre1.txt", "add")
-  val token = "P3kcOuKBjoMAAAAAAAACBXacGJnVEUl05Za_RIwtuFZGjrP05ot6zomlypLiiODf"
-
-  override def run(args: List[String]): IO[ExitCode] = for {
-    aRes <- BlazeClientBuilder[IO](ec).resource.use(client => {
-      val dClient = new DropboxClient(client, token)
-      dClient.upload(dargs, "Hello from http4s!".getBytes("UTF-8").toList)
-    })
-    _ <- IO(println(aRes))
-  } yield ExitCode.Success
 }
