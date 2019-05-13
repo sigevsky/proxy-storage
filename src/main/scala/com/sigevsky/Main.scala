@@ -23,7 +23,7 @@ object Main extends IOApp {
     for {
       naiveCache <- Ref.of[IO, HashMap[UUID, LoadStatus]](new HashMap())
       exitCode <- BlazeClientBuilder[IO](ec).resource.use { client =>
-      val dropBoxLoader = new DropboxLoader[IO](client, naiveCache, IO.contextShift(ec))
+      val dropBoxLoader = new DropboxRoutes[IO](client, naiveCache, IO.contextShift(ec))
         BlazeServerBuilder[IO]
           .bindHttp(8080, "localhost")
           .withHttpApp(dropBoxLoader.uploadRoute.orNotFound)
