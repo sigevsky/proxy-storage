@@ -20,11 +20,11 @@ import com.sigevsky.storage.DropboxClient
 
 import scala.collection.immutable.HashMap
 
-class DropboxRoutes[F[_]](client: Client[F], cache: Ref[F, HashMap[UUID, LoadStatus]], cachedContext: ContextShift[F]) {
+class DropboxRoutes[F[_]: Sync: Monad: Concurrent](client: Client[F], cache: Ref[F, HashMap[UUID, LoadStatus]], cachedContext: ContextShift[F]) {
 
   private[routes] val dsl: Http4sDsl[F] = new Http4sDsl[F]{}
 
-  def uploadRoute(implicit S: Sync[F], M: Monad[F], C: Concurrent[F]): HttpRoutes[F] = {
+  def uploadRoute: HttpRoutes[F] = {
     import dsl._
 
     HttpRoutes.of[F] {
@@ -34,11 +34,11 @@ class DropboxRoutes[F[_]](client: Client[F], cache: Ref[F, HashMap[UUID, LoadSta
           uuid <- Sync[F].delay(UUID.randomUUID())
           res  <- aUrl match {
             case Left(msg)  => BadRequest(s"Bad url:\n $msg")
-            case Right(url) => fetchAndUpload(url, loadRequest.token, loadRequest.path, uuid).handleErrorWith(e => cache.update(_.updated(uuid, Failed(s"$e")))).start >> Ok(uuid.toString)
+            case Right(url) => fetchAndUpload(url, loadRequest.token, loadRequest.path, uuid).handleErrorWith(e => cache.update(_.updated(uuid, {e.printStackTrace(); Failed(s"$e")}))).start >> Ok(uuid.toString)
           }
         } yield res)
       case GET -> Root / "dropbox" / "status" / id => for {
-        uuid <- S.delay(UUID.fromString(id))
+        uuid <- Sync[F].delay(UUID.fromString(id))
         opLoadStatus <- cache.get.map(_.get(uuid))
         respStatus <- opLoadStatus match {
           case Some(status) => Ok(status)
@@ -48,20 +48,21 @@ class DropboxRoutes[F[_]](client: Client[F], cache: Ref[F, HashMap[UUID, LoadSta
     }
   }
 
-  def fetchAndUpload(url: Uri, token: String, path: String, id: UUID)(implicit S: Sync[F], M: Monad[F]): F[Unit] = for {
+  def fetchAndUpload(url: Uri, token: String, path: String, id: UUID): F[Unit] = for {
     aSize <- NetworkingUtils.fetchFileSize(url, client)
     dropboxClient = new DropboxClient[F](client, token)
-    now <- S.delay(Instant.now().toEpochMilli)
+    now <- Sync[F].delay(Instant.now().toEpochMilli)
     res <- aSize match {
       case Right(num) => cache.update(_.updated(id, InProgress(0, now))) >> uploadToDropbox(dropboxClient, url, path, id)
       case Left(e)    => cache.update(_.updated(id, InProgress(0, now))) >> uploadToDropbox(dropboxClient, url, path, id)
     }
   } yield res
 
-  def uploadToDropbox(dropboxClient: DropboxClient[F], uri: Uri, path: String, id: UUID)(implicit S: Sync[F], M: Monad[F]): F[Unit] =
+  def uploadToDropbox(dropboxClient: DropboxClient[F], uri: Uri, path: String, id: UUID): F[Unit] =
     for {
       file <- NetworkingUtils.download(new URL(uri.renderString))
-      now <- S.delay(Instant.now().toEpochMilli)
+      now <- Sync[F].delay(Instant.now().toEpochMilli)
+      _   <- Sync[F].delay(println("Transmitting to dropbox"))
       resp <- dropboxClient.upload(DropboxApiArg(path, "add"), file)
       _ <- resp match {
         case Right(DropboxSuccessLoadResponse(name, _, path_display, _, _, _, _, _, _)) => cache.update(_.updated(id, Success(s"Successfully loaded $name to $path_display", now)))

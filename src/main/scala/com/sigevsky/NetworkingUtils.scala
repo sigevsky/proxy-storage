@@ -10,10 +10,7 @@ import cats.implicits._
 import scala.collection.mutable.ArrayBuffer
 import org.http4s.client._
 import org.http4s._
-import org.http4s.client.dsl.io._
 import org.http4s.headers._
-import org.http4s.MediaType._
-import org.http4s.Status.Successful
 
 import scala.language.higherKinds
 
@@ -31,7 +28,7 @@ object NetworkingUtils {
 
   private def load[F[_]: Sync: Monad](is: InputStream, buff: Array[Byte], offset: Int, acc: ArrayBuffer[Byte]): F[ArrayBuffer[Byte]] = for {
     n   <- Sync[F].delay(is.read(buff, 0, buff.length))
-    res <- if (n == -1) Monad[F].pure(acc) else Sync[F].delay(acc ++ buff.take(n)).flatMap(a => load(is, buff, offset + n, a))
+    res <- if (n == -1) Monad[F].pure(acc) else Sync[F].delay(acc ++= buff.take(n)).flatMap(a => load(is, buff, offset + n, a))
   } yield res
 
   def downloadChunkAndConsume[F[_]: Sync: Monad](file: URL, chunkSize: Int, consumer: Array[Byte] => F[Unit]): F[Long] = for {

@@ -16,7 +16,7 @@ import scala.collection.immutable.HashMap
 import scala.concurrent.ExecutionContext
 import scala.language.higherKinds
 
-object Main extends IOApp {
+object MainLoader extends IOApp {
   val ec: ExecutionContext  = ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
 
   override def run(args: List[String]): IO[ExitCode] =
