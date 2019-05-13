@@ -34,7 +34,7 @@ class DropboxRoutes[F[_]](client: Client[F], cache: Ref[F, HashMap[UUID, LoadSta
           uuid <- Sync[F].delay(UUID.randomUUID())
           res  <- aUrl match {
             case Left(msg)  => BadRequest(s"Bad url:\n $msg")
-            case Right(url) => fetchAndUpload(url, loadRequest.token, loadRequest.path, uuid).start >> Ok(uuid.toString)
+            case Right(url) => fetchAndUpload(url, loadRequest.token, loadRequest.path, uuid).handleErrorWith(e => cache.update(_.updated(uuid, Failed(s"$e")))).start >> Ok(uuid.toString)
           }
         } yield res)
       case GET -> Root / "dropbox" / "status" / id => for {

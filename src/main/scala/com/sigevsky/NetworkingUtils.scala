@@ -24,7 +24,7 @@ object NetworkingUtils {
   })
 
   def download[F[_]: Sync: Monad](file: URL): F[List[Byte]] = for {
-    ioBuffer <- Sync[F].delay(new Array[Byte](1024))
+    ioBuffer <- Sync[F].delay(new Array[Byte](8192))
     acc      <- Sync[F].delay(new ArrayBuffer[Byte]())
     res      <- remoteResource(file).use(is => load(is, ioBuffer, 0, acc))
   } yield res.toList
