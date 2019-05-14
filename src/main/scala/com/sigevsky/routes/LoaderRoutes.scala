@@ -20,7 +20,7 @@ import com.sigevsky.storage.DropboxClient
 
 import scala.collection.immutable.HashMap
 
-class DropboxRoutes[F[_]: Sync: Monad: Concurrent](client: Client[F], cache: Ref[F, HashMap[UUID, LoadStatus]], cachedContext: ContextShift[F]) {
+class DropboxRoutes[F[_]: Sync: Monad: Concurrent](client: Client[F], cache: Ref[F, HashMap[UUID, LoadStatus]]) {
 
   private[routes] val dsl: Http4sDsl[F] = new Http4sDsl[F]{}
 

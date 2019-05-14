@@ -14,7 +14,7 @@ import org.http4s.server.blaze._
 
 import scala.collection.immutable.HashMap
 import scala.concurrent.ExecutionContext
-import scala.language.higherKinds
+import scala.concurrent.duration._
 
 object MainLoader extends IOApp {
   val ec: ExecutionContext  = ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
@@ -22,8 +22,10 @@ object MainLoader extends IOApp {
   override def run(args: List[String]): IO[ExitCode] =
     for {
       naiveCache <- Ref.of[IO, HashMap[UUID, LoadStatus]](new HashMap())
-      exitCode <- BlazeClientBuilder[IO](ec).resource.use { client =>
-      val dropBoxLoader = new DropboxRoutes[IO](client, naiveCache, IO.contextShift(ec))
+      exitCode <- BlazeClientBuilder[IO](ec)
+        .withResponseHeaderTimeout(3 hours)
+        .resource.use { client =>
+      val dropBoxLoader = new DropboxRoutes[IO](client, naiveCache)
         BlazeServerBuilder[IO]
           .bindHttp(8080, "localhost")
           .withHttpApp(dropBoxLoader.uploadRoute.orNotFound)
