@@ -27,12 +27,12 @@ class DropboxClient[F[_]](client: Client[F], token: String) {
       ), body = bytes
     ))
 
-    def upload(args: DropboxApiArg, bytes: fs2.Stream[F, Byte])(implicit F: Sync[F], M: Monad[F]): F[Either[Throwable, DropboxSuccessLoadResponse]] =
-      uploadRequest(args, bytes)
-        .traverse(req => client.fetch[Either[Throwable, DropboxSuccessLoadResponse]](req) {
-          case Successful(res) => res.as[DropboxSuccessLoadResponse].map(_.asRight)
-          case ClientError(res) if 400 == res.status.code => res.as[String].map(e => DropboxLoadException(e).asLeft)
-          case ClientError(res) if 409 == res.status.code => res.as[DropboxFailLoadResponse].map(e => DropboxLoadException(e.error_summary).asLeft)
-          case _ => M.pure(DropboxLoadException("Something went wrong while quering dropbox api").asLeft)
-        }).map(_.flatten)
+  def upload(args: DropboxApiArg, bytes: fs2.Stream[F, Byte])(implicit F: Sync[F], M: Monad[F]): F[Either[Throwable, DropboxSuccessLoadResponse]] =
+    uploadRequest(args, bytes)
+      .traverse(req => client.fetch[Either[Throwable, DropboxSuccessLoadResponse]](req) {
+        case Successful(res) => res.as[DropboxSuccessLoadResponse].map(_.asRight)
+        case ClientError(res) if 400 == res.status.code => res.as[String].map(e => DropboxLoadException(e).asLeft)
+        case ClientError(res) if 409 == res.status.code => res.as[DropboxFailLoadResponse].map(e => DropboxLoadException(e.error_summary).asLeft)
+        case _ => M.pure(DropboxLoadException("Something went wrong while quering dropbox api").asLeft)
+      }).map(_.flatten)
 }
