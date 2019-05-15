@@ -34,7 +34,7 @@ class DropboxMachinery[F[_]: Sync: Monad: Timer: ContextShift](queue: Queue[F, U
       case Left(_) => cache.update(_.updated(job.id, Failed(s"Failed to parse url ${job.url}")))
       case Right(url) => fetchAndUpload(url, job.token, job.path, job.id).handleErrorWith(e => cache.update(_.updated(job.id, {e.printStackTrace(); Failed(s"$e")})))
     }
-    _   <- worker(i)
+    _   <- ContextShift[F].shift *> worker(i)
   } yield ()
 
   def fetchAndUpload(url: Uri, token: String, path: String, id: UUID): F[Unit] = for {
