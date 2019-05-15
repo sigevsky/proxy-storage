@@ -18,16 +18,16 @@ import org.http4s.Status.{ClientError, Successful}
 class DropboxClient[F[_]](client: Client[F], token: String) {
   private val dropBoxUriParse = Uri.fromString("https://content.dropboxapi.com/2/files/")
 
-  private def uploadRequest(args: DropboxApiArg, bytes: Seq[Byte])(implicit F: Sync[F]): Either[ParseFailure, Request[F]] = dropBoxUriParse.map(uri =>
+  private def uploadRequest(args: DropboxApiArg, bytes: fs2.Stream[F, Byte])(implicit F: Sync[F]): Either[ParseFailure, Request[F]] = dropBoxUriParse.map(uri =>
     Request(Method.POST, uri / "upload", headers=
       Headers.of(
         Authorization(Credentials.Token(AuthScheme.Bearer, token)),
         `Content-Type`(MediaType.application.`octet-stream`),
         Header("Dropbox-API-Arg", args.asJson.noSpaces)
-      ), body = fs2.Stream.fromIterator[F, Byte](bytes.iterator)
+      ), body = bytes
     ))
 
-    def upload(args: DropboxApiArg, bytes: Seq[Byte])(implicit F: Sync[F], M: Monad[F]): F[Either[Throwable, DropboxSuccessLoadResponse]] =
+    def upload(args: DropboxApiArg, bytes: fs2.Stream[F, Byte])(implicit F: Sync[F], M: Monad[F]): F[Either[Throwable, DropboxSuccessLoadResponse]] =
       uploadRequest(args, bytes)
         .traverse(req => client.fetch[Either[Throwable, DropboxSuccessLoadResponse]](req) {
           case Successful(res) => res.as[DropboxSuccessLoadResponse].map(_.asRight)
