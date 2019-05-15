@@ -21,14 +21,14 @@ object NetworkingUtils {
   })
 
   def download[F[_]: Sync: Monad](file: URL): F[List[Byte]] = for {
-    ioBuffer <- Sync[F].delay(new Array[Byte](8192))
+    ioBuffer <- Sync[F].delay(new Array[Byte](2048))
     acc      <- Sync[F].delay(new ArrayBuffer[Byte]())
-    res      <- remoteResource(file).use(is => load(is, ioBuffer, 0, acc))
-  } yield res.toList
+    res      <- remoteResource(file).use(is => load(is, ioBuffer, acc))
+  } yield res
 
-  private def load[F[_]: Sync: Monad](is: InputStream, buff: Array[Byte], offset: Int, acc: ArrayBuffer[Byte]): F[ArrayBuffer[Byte]] = for {
+  private def load[F[_]: Sync: Monad](is: InputStream, buff: Array[Byte], acc: ArrayBuffer[Byte]): F[ArrayBuffer[Byte]] = for {
     n   <- Sync[F].delay(is.read(buff, 0, buff.length))
-    res <- if (n == -1) acc.pure[F] else Sync[F].delay(acc ++= buff.take(n)).flatMap(a => load(is, buff, offset + n, a))
+    res <- if (n == -1) acc.pure[F] else Sync[F].delay(acc ++= buff.take(n)).flatMap(a => load(is, buff, a))
   } yield res
 
   def downloadChunkAndConsume[F[_]: Sync: Monad](file: URL, chunkSize: Int, consumer: Array[Byte] => F[Unit]): F[Long] = for {

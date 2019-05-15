@@ -4,7 +4,8 @@ package com.sigevsky.storage
 import cats.Monad
 import cats.effect.Sync
 import cats.implicits._
-import io.circe.syntax._, io.circe.generic.auto._
+import io.circe.syntax._
+import io.circe.generic.auto._
 import org.http4s.client._
 import org.http4s.headers.{Authorization, `Content-Type`}
 import org.http4s.{AuthScheme, Credentials, Header, Headers, MediaType, Method, ParseFailure, Request, Uri}
@@ -17,7 +18,7 @@ import org.http4s.Status.{ClientError, Successful}
 class DropboxClient[F[_]](client: Client[F], token: String) {
   private val dropBoxUriParse = Uri.fromString("https://content.dropboxapi.com/2/files/")
 
-  private def uploadRequest(args: DropboxApiArg, bytes: List[Byte])(implicit F: Sync[F]): Either[ParseFailure, Request[F]] = dropBoxUriParse.map(uri =>
+  private def uploadRequest(args: DropboxApiArg, bytes: Seq[Byte])(implicit F: Sync[F]): Either[ParseFailure, Request[F]] = dropBoxUriParse.map(uri =>
     Request(Method.POST, uri / "upload", headers=
       Headers.of(
         Authorization(Credentials.Token(AuthScheme.Bearer, token)),
@@ -26,7 +27,7 @@ class DropboxClient[F[_]](client: Client[F], token: String) {
       ), body = fs2.Stream.fromIterator[F, Byte](bytes.iterator)
     ))
 
-    def upload(args: DropboxApiArg, bytes: List[Byte])(implicit F: Sync[F], M: Monad[F]): F[Either[Throwable, DropboxSuccessLoadResponse]] =
+    def upload(args: DropboxApiArg, bytes: Seq[Byte])(implicit F: Sync[F], M: Monad[F]): F[Either[Throwable, DropboxSuccessLoadResponse]] =
       uploadRequest(args, bytes)
         .traverse(req => client.fetch[Either[Throwable, DropboxSuccessLoadResponse]](req) {
           case Successful(res) => res.as[DropboxSuccessLoadResponse].map(_.asRight)
